@@ -611,6 +611,15 @@ extern umsg32 receiveMsg(void);
 /* in file receive.c */
 extern syscall receiveMsgs(umsg32 *, uint32);
 
+/* in subscribe.c */
+syscall subscribe(topic16 t, void (*hnd)(topic16, void *, uint32));
+
+/* in unsubscribe.c */
+syscall unsubscribe(topic16);
+
+/* in publish.c */
+syscall publish(topic16 t, void *, uint32);
+
 /* NETWORK BYTE ORDER CONVERSION NOT NEEDED ON A BIG-ENDIAN COMPUTER */
 #define	htons(x)   ( ( 0xff & ((x)>>8) ) | ( (0xff & (x)) << 8 ) )
 #define	htonl(x)   (  (((x)>>24) & 0x000000ff) | (((x)>> 8) & 0x0000ff00) | \

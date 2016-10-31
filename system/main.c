@@ -2,122 +2,98 @@
 
 #include <xinu.h>
 
-pid32 sender1_id;
-pid32 receiver1_id;
-pid32 sender2_id;
-pid32 receiver2_id;
+pid32 a_id;
+pid32 b_id;
+pid32 c_id;
+pid32 d_id;
+pid32 broker_id;
+sid32 publishsem;
 
-
-process sender1(void)
-{	
-	umsg32 msgs[3] = {10,20,30};
-	umsg32 msg = 12;
-
-	printf("Sender pid: %d sending message via sendMsg to %d: %d\n",sender1_id, receiver1_id, msg );
-	sendMsg(receiver1_id, msg);
-	sleep(1);
-	printf("Sender pid: %d sending message via sendMsg to %d: %d\n",sender1_id, receiver1_id, 20 );
-	sendMsg(receiver1_id, 20);
-	sleep(1);
-	printf("Sender pid: %d sending message via sendMsg to %d: %d\n",sender1_id, receiver2_id, 30 );
-	sendMsg(receiver2_id, 30);
-	sleep(1);
-	printf("Sender pid: %d sending message via sendMsg to %d: %d\n",sender1_id, receiver2_id, 40 );
-	sendMsg(receiver2_id, 40);
-	sleep(1);
-	printf("Sender pid: %d sending message via sendMsg to %d: %d\n",sender1_id, receiver1_id, 50 );
-	sendMsg(receiver1_id, 50);
-	sleep(1);
-
-	printf("Sender pid: %d sending message via send to %d: %d\n",sender1_id, receiver1_id, 199 );
-	send(receiver2_id, 199);
-	sleep(1);
-
-	printf("Sender pid: %d sending messages via sendMsgs to %d: %d, %d, %d\n",sender1_id, receiver1_id, msgs[0], msgs[1], msgs[2] );
-	sendMsgs(receiver1_id, msgs, 3);
-	sleep(1);
-
-	printf("Sender pid: %d sending messages via sendMsgs to %d: %d, %d, %d\n",sender1_id, receiver2_id, msgs[0], msgs[1], msgs[2] );
-	sendMsgs(receiver2_id, msgs, 3);
-	sleep(1);
-
-	return OK;
+void foo(topic16 topic, void* data, uint32 size) {
+	kprintf("- Function foo() is called with topic = %d and data = %d, %d, %d and data-size=%d\n", topic, ((int*) data)[0], ((int*) data)[1], ((int*) data)[2], size);
+	signal(publishsem);  // Now the publisher can edit the data
 }
 
-process receiver1(void)
-{
+void bar(topic16 topic, void* data, uint32 size) {
+	kprintf("- Function bar() is called with topic = %d and data = %d, %d and data-size=%d\n", topic, ((int*) data)[0], ((int*) data)[1], size);
+	signal(publishsem);	// Now the publisher can edit the data
+}
+
+void processA() {
+	topic16 topic = 10;
+	kprintf("Process A subscribes to topic %d with handler foo()\n", topic);
+	subscribe(topic, foo);
+	sleep(5);
+}
+
+void processC() {
+	sleep(1);
+	topic16 topic = 12;
+	kprintf("Process C subscribes to topic %d with handler bar()\n", topic);
+	subscribe(topic, bar);
+	sleep(15); 		//Sleeping so that the process doesnt end!!
+}
+
+void processB() {
+	sleep(2);
+	topic16 topic = 10;
+	uint32 data[3] = {1,2,3};
+	kprintf("Process B publishes %d, %d, %d to topic %d\n", ((int*) data)[0], ((int*) data)[1], ((int*) data)[2], topic);
+	publish(topic, data, 3);
+	wait(publishsem); 
+	
+	data[2] = 444; // changing the value of data[2]..
+
+	sleep(2);
+
+	uint32 data2[3] = {44,55};
+	kprintf("Process B publishes %d, %d, to topic %d\n", ((int*) data2)[0], ((int*) data2)[1], topic);
+	publish(12, data2, 2);
+	wait(publishsem);
+}
+
+void call_handlers(topic16 topic, void* data, int32 size) {
+	int topicid = topic % NTOPICS;
+	int gid = topic / NTOPICS;	
 	int i;
-	umsg32 msgs[5];
-
-	printf("Receiver pid: %d received: %d by receiveMsg system call\n", receiver1_id, receiveMsg());
-	printf("Receiver pid: %d received: %d by receiveMsg system call\n", receiver1_id, receiveMsg());
-
-	printf("Receiver pid: %d received: %d by receive system call\n", receiver1_id, receive());
-
-	receiveMsgs(msgs, 5);
-	for (i = 0; i < 5; ++i)
-	{
-		printf("Receiver pid: %d received: %d by receiveMsgs call\n", receiver1_id, msgs[i]);
+	for(i = 0; i < MAXSUB; i++) {
+		if(topicstab[topicid][i].gid == gid || (gid == 0 && topicstab[topicid][i].gid != -1)) {
+			topicstab[topicid][i].handler(topic, data, size);	
+		}	
 	}
-	return OK;
 }
 
-process sender2(void)
-{	
-	umsg32 msg = 13;
-	pid32 pids[2] = {receiver1_id, receiver2_id};
-
-	printf("Sender pid: %d sending message via sendMsg to %d: %d\n",sender2_id, receiver2_id, 70 );
-	sendMsg(receiver2_id, 70);
-	sleep(1);
-
-	printf("Sender pid: %d sending message via send to %d: %d\n",sender2_id, receiver1_id, 99 );
-	send(receiver1_id, 99);
-	sleep(1);
-
-	printf("Sender pid: %d sending messages via sendnMsg to %d, %d: %d\n",sender2_id, receiver1_id, receiver2_id, msg );
-	sendnMsg(2, pids, msg);
-	sleep(1);
-	 
-	printf("....Sleeping for 10 seconds. Will send final message after that....");
-	sleep(10);
-
-	printf("Sender pid: %d sending message via sendMsg to %d: %d\n",sender2_id, receiver2_id, 1000 );
-	sendMsg(receiver2_id, 1000);
-	return OK;
-}
-
-process receiver2(void)
-{
+void broker(void)
+{		
 	int i;
-	printf("Receiver pid: %d received: %d by receiveMsg system call\n", receiver2_id, receiveMsg());
-	printf("Receiver pid: %d received: %d by receiveMsg system call\n", receiver2_id, receiveMsg());
-	printf("Receiver pid: %d received: %d by receive system call\n", receiver2_id, receive());
-	umsg32 msgs[6];
-	receiveMsgs(msgs, 6);
-	for (i = 0; i < 6; ++i)
-	{
-		printf("Receiver pid: %d received: %d by receiveMsgs system call\n", receiver2_id, msgs[i]);
+	while(1) {	  
+		if(!topicQempty()) {
+		    struct topicdata elem;
+	        elem=topicQ[topicQf];
+	        if(topicQf==topicQr){ topicQf=-1; topicQr=-1;} 
+	        else
+	            topicQf=(topicQf+1) % topicQSIZE;		    
+			call_handlers(elem.topic, elem.data, elem.size);
+		}
 	}
-	return OK;
 }
 
 process	main(void)
 {
 	recvclr();
 
-	sender1_id = create(sender1, 4096, 50, "sender1", 0);
-	receiver1_id = create(receiver1, 4096, 50, "receiver1", 0);
-	sender2_id = create(sender2, 4096, 50, "sender2", 0);
-	receiver2_id = create(receiver2, 4096, 50, "receiver2", 0);
+	a_id = create(processA, 4096, 50, "processA", 0);
+	b_id = create(processB, 4096, 50, "processB", 0);
+	c_id = create(processC, 4096, 50, "processC", 0);
+	broker_id = create(broker, 4096, 50, "broker", 0);
+	
+	resume(a_id);
+	resume(b_id);
+	resume(c_id);
+	resume(broker_id);
 
-	resched_cntl(DEFER_START);
-	resume(sender1_id);
-	resume(receiver1_id);
+	publishsem = semcreate(1);
 
-	resume(sender2_id);
-	resume(receiver2_id);
-	resched_cntl(DEFER_STOP);
 
 	return OK;
 }

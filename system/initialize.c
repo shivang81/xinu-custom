@@ -20,7 +20,7 @@ extern	void meminit(void);	/* Initializes the free memory list	*/
 struct	procent	proctab[NPROC];	/* Process table			*/
 struct	sentry	semtab[NSEM];	/* Semaphore table			*/
 struct	memblk	memlist;	/* List of free memory blocks		*/
-
+struct 	topic topicstab[NTOPICS][MAXSUB];
 /* Active system status */
 
 int	prcount;		/* Total number of live processes	*/
@@ -78,7 +78,7 @@ void	nulluser()
 
 	/* Initialize the network stack and processes */
 
-	net_init();
+	//net_init();
 
 	/* Create a process to execute function main() */
 
@@ -104,6 +104,7 @@ void	nulluser()
 static	void	sysinit()
 {
 	int32	i;
+	int32 	j;
 	struct	procent	*prptr;		/* Ptr to process table entry	*/
 	struct	sentry	*semptr;	/* Prr to semaphore table entry	*/
 
@@ -176,6 +177,14 @@ static	void	sysinit()
 
 	for (i = 0; i < NDEVS; i++) {
 		init(i);
+	}
+
+	/* Initialize the topicstab */
+	
+	for (i = 0; i < NTOPICS; i++) {
+		for(j = 0; j < MAXSUB; j++) {
+			topicstab[i][j].gid = -1;
+		}
 	}
 	return;
 }

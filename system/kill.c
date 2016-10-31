@@ -13,12 +13,19 @@ syscall	kill(
 	intmask	mask;			/* Saved interrupt mask		*/
 	struct	procent *prptr;		/* Ptr to process's table entry	*/
 	int32	i;			/* Index into descriptors	*/
-
+	int32 	j;
+	
 	mask = disable();
 	if (isbadpid(pid) || (pid == NULLPROC)
 	    || ((prptr = &proctab[pid])->prstate) == PR_FREE) {
 		restore(mask);
 		return SYSERR;
+	}
+
+	// Remove all subscriptions for the process
+	for (j = 0; j < NTOPICS; j++) {
+		if(topicstab[j][pid].gid != -1)
+			topicstab[j][pid].gid = -1;
 	}
 
 	if (--prcount <= 1) {		/* Last user process completes	*/
