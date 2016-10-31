@@ -1,3 +1,7 @@
+/*
+Modified by Shivang Gupta
+Added declarations for sendMsg, sendMsgs, sendnMsg, receiveMsg and receiveMsgs 
+*/
 /* in file addargs.c */
 extern	status	addargs(pid32, int32, int32[], int32,char *, void *);
 
@@ -172,9 +176,6 @@ extern	process	rawin(void);
 extern	void	eth_hton(struct netpacket *);
 extern	void	eth_ntoh(struct netpacket *);
 extern	uint16	getport(void);
-
-/* in file netstart.c */
-extern	void	netstart(void);
 
 /* in file kill.c */
 extern	syscall	kill(pid32);
@@ -388,7 +389,6 @@ extern	status	rdscomm(struct rd_msg_hdr *, int32, struct rd_msg_hdr *,
 
 /* in file rdsprocess.c */
 extern	void	rdsprocess(struct rdscblk *);
-extern	void	rdsrun(struct rdscblk *);
 
 /* in file read.c */
 extern	syscall	read(did32, char *, uint32);
@@ -596,6 +596,21 @@ extern	void	xdone(void);
 /* in file yield.c */
 extern	syscall	yield(void);
 
+/* in file send.c */
+extern syscall sendMsg(pid32, umsg32);
+
+/* in file send.c */
+extern uint32 sendMsgs(pid32, umsg32 *, uint32);
+
+/* in file send.c */
+extern uint32 sendnMsg(uint32, pid32 *, umsg32);
+
+/* in file receive.c */
+extern umsg32 receiveMsg(void);
+
+/* in file receive.c */
+extern syscall receiveMsgs(umsg32 *, uint32);
+
 /* NETWORK BYTE ORDER CONVERSION NOT NEEDED ON A BIG-ENDIAN COMPUTER */
 #define	htons(x)   ( ( 0xff & ((x)>>8) ) | ( (0xff & (x)) << 8 ) )
 #define	htonl(x)   (  (((x)>>24) & 0x000000ff) | (((x)>> 8) & 0x0000ff00) | \
@@ -603,3 +618,4 @@ extern	syscall	yield(void);
 #define	ntohs(x)   ( ( 0xff & ((x)>>8) ) | ( (0xff & (x)) << 8 ) )
 #define	ntohl(x)   (  (((x)>>24) & 0x000000ff) | (((x)>> 8) & 0x0000ff00) | \
 		      (((x)<< 8) & 0x00ff0000) | (((x)<<24) & 0xff000000) )
+

@@ -1,5 +1,10 @@
 /* create.c - create, newpid */
 
+/* 
+Modified by Shivang Gupta
+Initialized the front, rear of the message queue on process creation.
+*/
+
 #include <xinu.h>
 
 local	int newpid();
@@ -51,6 +56,9 @@ pid32	create(
 	prptr->prsem = -1;
 	prptr->prparent = (pid32)getpid();
 	prptr->prhasmsg = FALSE;
+
+	prptr->qfront = -1;
+	prptr->qrear = -1;
 
 	/* set up initial device descriptors for the shell		*/
 	prptr->prdesc[0] = CONSOLE;	/* stdin  is CONSOLE device	*/
@@ -105,3 +113,4 @@ local	pid32	newpid(void)
 	}
 	return (pid32) SYSERR;
 }
+

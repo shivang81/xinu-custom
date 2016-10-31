@@ -1,3 +1,11 @@
+/* 
+Modified by Shivang Gupta
+Added a new state – “PR_RECQ”. This state is introduced to separate 
+out the message passing functionality from the existing send, 
+receive system calls and not interfere with their working.
+Also added message array, front and rear entries in procent. 
+These will contain information about the message queue for each process.
+*/
 /* process.h - isbadpid */
 
 /* Maximum number of processes in the system */
@@ -16,11 +24,13 @@
 #define	PR_SUSP		5	/* Process is suspended			*/
 #define	PR_WAIT		6	/* Process is on semaphore queue	*/
 #define	PR_RECTIM	7	/* Process is receiving with timeout	*/
+#define PR_RECQ     8   /* Process is waiting for a message on a queue		*/
 
 /* Miscellaneous process definitions */
 
 #define	PNMLEN		16	/* Length of process "name"		*/
 #define	NULLPROC	0	/* ID of the null process		*/
+#define NMSGS		10  /* Max number of messages in message queue */
 
 /* Process initialization constants */
 
@@ -52,6 +62,9 @@ struct procent {		/* Entry in the process table		*/
 	umsg32	prmsg;		/* Message sent to this process		*/
 	bool8	prhasmsg;	/* Nonzero iff msg is valid		*/
 	int16	prdesc[NDESC];	/* Device descriptors for process	*/
+	umsg32  prmsgs[NMSGS]; /* Messages sent to this process */
+	int     qfront;		/* front of the message queue */
+	int 	qrear;		/* rear of the message queue */
 };
 
 /* Marker for the top of a process stack (used to help detect overflow)	*/
@@ -60,3 +73,5 @@ struct procent {		/* Entry in the process table		*/
 extern	struct	procent proctab[];
 extern	int32	prcount;	/* Currently active processes		*/
 extern	pid32	currpid;	/* Currently executing process		*/
+
+
